@@ -227,7 +227,7 @@ end
 
 MAX_ITER = 1000 # number of simulation iterations
 
-NUM_BUYERS = 100 # number of buyers
+NUM_BUYERS = 60 # number of buyers
 NUM_SELLERS = 100 # number of sellers
 
 NETWORK_TYPE = "preferential_attachment" # type of network between agents
