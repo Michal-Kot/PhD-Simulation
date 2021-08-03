@@ -21,6 +21,8 @@ mutable struct buyer
     quality_of_unit_ad::Float64
 end
 
+
+
 # FUNCTIONS
 
 function create_network(type::String; num_buyers::Int64, num_links::Int64=0, pref_attachment_links::Int64=0)
@@ -137,7 +139,15 @@ function exchange_goods(buyers::Vector{buyer}, sellers::Vector{seller}, market; 
 
 end
 
-function update_quality_expectation(buyers::Vector{buyer}, network; accessibility_step::Int64=1, λ_ind::Float64=0.0, λ_neigh::Float64=0.0, λ_ad::Float64=0.0)
+function update_quality_expectation(method::String, buyers::Vector{buyer}, network; accessibility_step::Int64=1, λ_ind::Float64=0.0, λ_neigh::Float64=0.0, λ_ad::Float64=0.0)
+    if method == "IZQUIERDO"
+        return update_quality_expectation_IZQ(buyers, network; accessibility_step, λ_ind, λ_neigh, λ_ad)
+    elseif method == "BAYES"
+        return 0
+    end
+end
+
+function update_quality_expectation_IZQ(buyers::Vector{buyer}, network; accessibility_step::Int64=1, λ_ind::Float64=0.0, λ_neigh::Float64=0.0, λ_ad::Float64=0.0)
 
     for i in 1:length(buyers)
 
@@ -203,7 +213,7 @@ function receive_advertising(buyers::Vector{buyer}; intensity::Float64, dist::St
 end
 
 
-function simulate(max_iter::Int64, num_sellers::Int64, num_buyers::Int64; network_type::String, num_links::Int64=0, pref_attachment_links::Int64=0, dist::String, quality_variance_exp::Float64, quality_variance_ad::Float64, accessibility_step::Int64=1, λ_ind::Float64, λ_neigh::Float64, ad_intensity::Float64=0, λ_ad::Float64)
+function simulate(max_iter::Int64, num_sellers::Int64, num_buyers::Int64; network_type::String, num_links::Int64=0, pref_attachment_links::Int64=0, dist::String, quality_variance_exp::Float64, quality_variance_ad::Float64, accessibility_step::Int64=1, λ_ind::Float64, λ_neigh::Float64, ad_intensity::Float64=0, λ_ad::Float64, update_method::String="IZQUIERDO")
 
     """SETUP"""
 
@@ -242,7 +252,7 @@ function simulate(max_iter::Int64, num_sellers::Int64, num_buyers::Int64; networ
 
         buyers = receive_advertising(buyers; intensity = ad_intensity, dist = dist, quality_variance = quality_variance_ad)
 
-        buyers = update_quality_expectation(buyers, network; accessibility_step = accessibility_step, λ_ind = λ_ind, λ_neigh = λ_neigh, λ_ad = λ_ad)
+        buyers = update_quality_expectation(update_method, buyers, network; accessibility_step = accessibility_step, λ_ind = λ_ind, λ_neigh = λ_neigh, λ_ad = λ_ad)
 
         push!(result_average_expected_quality, mean(getfield.(buyers, :quality_expectation)))
 
@@ -254,7 +264,7 @@ end
 
 # VARIABLES CONTROLLING THE SIMULATION
 
-MAX_ITER = 10000 # number of simulation iterations
+MAX_ITER = 1000 # number of simulation iterations
 
 NUM_BUYERS = 100 # number of buyers
 NUM_SELLERS = 100 # number of sellers
@@ -264,7 +274,8 @@ NUM_LINKS = 200 # number of links, for random graphs only
 PREF_ATTACHMENT_LINKS = 6 # number of neighbours per agent, for barabasi-albert only
 
 DIST = "uniform" # distribution of quality
-QUALITY_VARIANCE_EXP = 0.9 # variance of quality, when consuming
+QUALITY_VARIANCE_EXP = 0.2 # variance of quality, when consuming
+
 QUALITY_VARIANCE_AD = 0.6 # variance of quality, when ad
 ACCESSIBILITY_STEP = 1 # distance from agent to agent, defining neighbourhood
 Λ_IND = 0.8 # individual learning
@@ -292,3 +303,64 @@ plot!(RESULTS.demand[1].volume, RESULTS.demand[1].price, label = "Demand (t=0)")
 plot!(RESULTS.demand[10].volume, RESULTS.demand[10].price, label = "Demand (t=10)")
 plot!(RESULTS.demand[100].volume, RESULTS.demand[100].price, label = "Demand (t=100)")
 plot!(RESULTS.demand[1000].volume, RESULTS.demand[1000].price, label = "Demand (t=1000)")
+
+#### SANDBOX ####
+
+num_sellers = NUM_SELLERS
+num_buyers = NUM_BUYERS
+network_type = NETWORK_TYPE = "preferential_attachment" # type of network between agents
+num_links = NUM_LINKS = 200 # number of links, for random graphs only
+pref_attachment_links = PREF_ATTACHMENT_LINKS = 6 # number of neighbours per agent, for barabasi-albert only
+
+dist = DIST = "uniform" # distribution of quality
+quality_variance_exp = QUALITY_VARIANCE_EXP = 0.2 # variance of quality, when consuming
+
+quality_variance_ad = QUALITY_VARIANCE_AD = 0.6 # variance of quality, when ad
+accessibility_step = ACCESSIBILITY_STEP = 1 # distance from agent to agent, defining neighbourhood
+Λ_IND = 0.8 # individual learning
+Λ_NEIGH = 0.2 # social learning
+Λ_AD = 0.5
+
+ad_intensity = AD_INTENSITY = 0.6
+
+i = 1
+
+my_prod_qual = 0
+social_prod_qual = Vector{Float64}()
+my_ad_qual = 0
+
+if buyers[i].unit_bought
+    my_prod_qual = buyers[i].quality_of_unit_bought - buyers[i].quality_expectation
+end
+
+my_id = getfield(buyers[i], :id)
+my_neighbours_distance = gdistances(network, my_id)
+my_neighbours_ids = collect(1:length(buyers))[(my_neighbours_distance .<= accessibility_step) .& (my_neighbours_distance .> 0)]
+my_neighbours_positions = .!isnothing.(indexin(getfield.(buyers, :id), my_neighbours_ids))
+my_neighbours_positions = findall(x->x==maximum(my_neighbours_positions), my_neighbours_positions)
+
+neigh_prod_quality = 0
+neigh_prod_buy = 0
+mean_neigh_prod_qual = 0
+
+for neigh in my_neighbours_positions
+    if buyers[neigh].unit_bought
+        neigh_prod_quality += buyers[neigh].quality_of_unit_bought
+        neigh_prod_buy += 1
+    end
+end
+
+if neigh_prod_buy > 0
+    mean_neigh_prod_qual = neigh_prod_quality / neigh_prod_buy - buyers[i].quality_expectation
+end
+
+if buyers[i].received_ad
+    my_ad_qual = buyers[i].quality_of_unit_ad - buyers[i].quality_expectation
+end
+
+quality_variance_exp
+
+new_quality_expectation = buyers[i].quality_expectation + λ_ind * my_prod_qual + λ_neigh * mean_neigh_prod_qual + λ_ad * my_ad_qual
+
+setfield!(buyers[i], :quality_expectation, new_quality_expectation)
+setfield!(buyers[i], :reservation_price, new_quality_expectation * getfield(buyers[i], :std_reservation_price))
