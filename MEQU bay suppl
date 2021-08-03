@@ -1,0 +1,108 @@
+
+
+function simulate(max_iter::Int64, num_firms::Int64, num_customers::Int64; network_type::String, num_links::Int64=0, pref_attachment_links::Int64=0, dist::String, quality_variance_exp::Float64, quality_variance_ad::Float64, accessibility_step::Int64=1, λ_ind::Float64, λ_neigh::Float64, ad_intensity::Float64=0, λ_ad::Float64, update_method::String="IZQUIERDO")
+
+    """SETUP"""
+
+    firms = create_firms(num_firms)
+    customers = create_customers(num_customers)
+    network = create_network(network_type; num_customers = num_customers, num_links = num_links, pref_attachment_links = pref_attachment_links)
+
+    result_price = Vector{Float64}()
+    result_traded_units = Vector{Float64}()
+    result_average_expected_quality = Vector{Float64}()
+
+    result_firms_surplus = Vector{Float64}()
+    result_customers_surplus = Vector{Float64}()
+
+    result_demand = []
+    result_supply = (price = collect(1:(1+maximum(getfield.(firms, :marginal_cost)))), volume = [sum(getfield.(firms, :marginal_cost) .<= x) for x in 1:(1+maximum(getfield.(firms, :marginal_cost)))])
+
+    """GO"""
+
+    for iteration in 1:max_iter
+
+        firms = create_supply(firms)
+        customers = create_demand(customers)
+
+        market = calculate_price_and_traded_units(customers, firms)
+
+        push!(result_demand, (price = collect(1:(1+maximum(getfield.(customers, :reservation_price)))), volume = [sum(getfield.(customers, :reservation_price) .>= x) for x in 1:(1+maximum(getfield.(customers, :reservation_price)))]))
+
+        push!(result_price, market.price)
+        push!(result_traded_units, market.traded_units)
+
+        customers, firms = exchange_goods(customers, firms, market; dist = dist, quality_variance = quality_variance_exp)
+
+        push!(result_customers_surplus, sum(getfield.(customers, :surplus)))
+        push!(result_firms_surplus, sum(getfield.(firms, :surplus)))
+
+        customers = receive_advertising(customers; intensity = ad_intensity, dist = dist, quality_variance = quality_variance_ad)
+
+        customers = update_quality_expectation(update_method, customers, network; accessibility_step = accessibility_step, λ_ind = λ_ind, λ_neigh = λ_neigh, λ_ad = λ_ad)
+
+        push!(result_average_expected_quality, mean(getfield.(customers, :quality_expectation)))
+
+    end
+
+    return (price = result_price, traded_units = result_traded_units, expected_quality = result_average_expected_quality, customers_surplus = result_customers_surplus, firms_surplus = result_firms_surplus, demand = result_demand, supply = result_supply)
+
+end
+
+# VARIABLES CONTROLLING THE SIMULATION
+
+MAX_ITER = 1000 # number of simulation iterations
+
+NUM_CUSTOMERS = 100 # number of customers
+NUM_FIRMS = 100 # number of firms
+
+NETWORK_TYPE = "preferential_attachment" # type of network between agents
+NUM_LINKS = 200 # number of links, for random graphs only
+PREF_ATTACHMENT_LINKS = 6 # number of neighbours per agent, for barabasi-albert only
+
+DIST = "uniform" # distribution of quality
+QUALITY_VARIANCE_EXP = 0.2 # variance of quality, when consuming
+
+QUALITY_VARIANCE_AD = 0.6 # variance of quality, when ad
+ACCESSIBILITY_STEP = 1 # distance from agent to agent, defining neighbourhood
+Λ_IND = 0.8 # individual learning
+Λ_NEIGH = 0.2 # social learning
+Λ_AD = 0.5
+
+AD_INTENSITY = 0.6
+
+# SIMULATION
+
+@time RESULTS = simulate(MAX_ITER, NUM_FIRMS, NUM_CUSTOMERS; network_type=NETWORK_TYPE, pref_attachment_links = PREF_ATTACHMENT_LINKS, dist = DIST, quality_variance_exp =  QUALITY_VARIANCE_EXP, quality_variance_ad = QUALITY_VARIANCE_AD, accessibility_step = ACCESSIBILITY_STEP, λ_ind = Λ_IND, λ_neigh = Λ_NEIGH, ad_intensity = AD_INTENSITY, λ_ad = Λ_AD)
+
+# RESULTS
+
+plot(RESULTS.price, xlabel = "Trading sessions", ylabel = "Price", legend = nothing)
+plot!(RESULTS.traded_units, xlabel = "Trading sessions", ylabel = "Volume", legend = nothing)
+plot(RESULTS.expected_quality, xlabel = "Trading sessions", ylabel = "Average expected quality", legend = nothing)
+
+plot(RESULTS.customers_surplus, xlabel = "Trading sessions", ylabel = "Surplus", label = "customers")
+plot!(RESULTS.firms_surplus, xlabel = "Trading sessions", label = "firms")
+plot!(RESULTS.customers_surplus + RESULTS.firms_surplus, xlabel = "Trading sessions", label = "Total")
+
+plot(RESULTS.supply.volume, RESULTS.supply.price, xlabel = "Volume", ylabel = "Price", label = "Supply")
+plot!(RESULTS.demand[1].volume, RESULTS.demand[1].price, label = "Demand (t=0)")
+plot!(RESULTS.demand[10].volume, RESULTS.demand[10].price, label = "Demand (t=10)")
+plot!(RESULTS.demand[100].volume, RESULTS.demand[100].price, label = "Demand (t=100)")
+plot!(RESULTS.demand[1000].volume, RESULTS.demand[1000].price, label = "Demand (t=1000)")
+
+function update_quality_expectation_BAY(customers::Vector{customer}, network; accessibility_step::Int64=1, λ_ind::Float64=0.0, λ_neigh::Float64=0.0, λ_ad::Float64=0.0)
+end
+
+
+
+
+
+
+function update_quality_expectation(method::String, customers::Vector{customer}, network; accessibility_step::Int64=1, λ_ind::Float64=0.0, λ_neigh::Float64=0.0, λ_ad::Float64=0.0)
+    if method == "IZQUIERDO"
+        return update_quality_expectation_IZQ(customers, network; accessibility_step, λ_ind, λ_neigh, λ_ad)
+    elseif method == "BAYES"
+        return 0
+    end
+end
