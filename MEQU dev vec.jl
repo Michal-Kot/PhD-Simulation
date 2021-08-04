@@ -408,21 +408,20 @@ function simulate(num_firms, a, σ_v0, prices, advertising, σ_ϵ, σ_α, num_cu
 
     # preparado
 
-    firms = create_firms(num_firms, a, σ_v0, prices, advertising, σ_ϵ, σ_α)
-    customers = create_customers(num_customers, firms, a, σ_v0, max_stock_period, wealth, risk)
-    network = create_network(network_type; num_customers = num_customers, num_links = num_links, pref_attachment_links = pref_attachment_links)
-    @time neighbours_distances = inverse_gdistances.(1:length(customers); network)
-    my_neighbours_ids = find_neighbours_positions.(neighbours_distances; accessibility_step)
+    firms = create_firms(num_firms, a, σ_v0, prices, advertising, σ_ϵ, σ_α) # done
+    customers = create_customers(num_customers, firms, a, σ_v0, max_stock_period, wealth, risk) # done
+    network = create_network(network_type; num_customers = num_customers, num_links = num_links, pref_attachment_links = pref_attachment_links) # done
+    @time neighbours_distances = inverse_gdistances.(1:length(customers); network) # done
+    my_neighbours_ids = find_neighbours_positions.(neighbours_distances; accessibility_step) # done
 
     # sempre
 
     for iter in 1:max_iter
 
-        price_current = getindex.(getfield.(firms, :price), iter)
-        ad_intensity = getindex.(getfield.(firms, :advertising), iter)
-        customers = clear_previous_step.(customers; firms)
-        customers = use_stock.(customers) 
-
+        price_current = getindex.(getfield.(firms, :price), iter) # done
+        ad_intensity = getindex.(getfield.(firms, :advertising), iter) # done
+        customers = clear_previous_step.(customers; firms) # done
+        customers = use_stock.(customers)  # done
         @time customers = customer_choice.(customers; price_current, firms) # to improve
         customers = simulate_quality.(customers; firms, dist)
         @time customers = ad_receive.(customers; ad_intensity)
