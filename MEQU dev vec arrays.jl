@@ -69,11 +69,11 @@ function create_c_quality_uncertainty(I,J,T,σ_v0)
     return c_quality_uncertainty
 end
 
-function create_c_stock(I,T,max_stock_period)
+function create_c_stock(I,T,max_stock_period, c_std_reservation_price)
     c_stock = zeros(Int64, I, T)
     #c_stock[:,1] = sample(1:max_stock_period, I)
-    #c_stock[:,1] .= 1
-    c_stock[:,1] .= sample(0:max_stock_period, I)
+    c_stock[:,1] .= 1
+    #c_stock[:,1] .= Int.(floor.(c_std_reservation_price ./ 100 * max_stock_period))
     return c_stock
 end
 
@@ -195,7 +195,7 @@ function customer_choice(I, J, c_stock, c_std_reservation_price, c_quality_expec
                 b,u,s = choose_best(1:J, c_utility[i,:], c_surplus[i,:])
                 c_unit_bought[i, b, iter] = true
                 c_quality_of_unit_bought[i,b,iter] = f_quality[b] + rand(Normal(0, f_quality_variance_experience[b]))
-                c_stock[i,iter] = max_stock_period
+                c_stock[i,iter] = sample(1:max_stock_period)
             end
         end
     end
@@ -203,6 +203,8 @@ function customer_choice(I, J, c_stock, c_std_reservation_price, c_quality_expec
     return c_stock, c_unit_bought, c_quality_of_unit_bought
 
 end
+
+sample(1:max_stock_period)
 
 function receive_ad(I, c_received_ad, c_quality_of_received_ad, f_advertising, f_quality, f_quality_variance_advertising, iter)
     for i in 1:I
@@ -297,7 +299,7 @@ function simulate(num_customers, num_firms, max_iter, prices, advertising, A, σ
     c_quality_of_unit_bought = zeros(Float64, I, J, T)
     c_received_ad = falses(I, J, T)
     c_quality_of_received_ad = zeros(Float64, I, J ,T)
-    c_stock = create_c_stock(I,T,max_stock_period)
+    c_stock = create_c_stock(I,T,max_stock_period,c_std_reservation_price)
     c_risk = create_c_risk(I, risk)
 
     c_neighbours_bought = zeros(Int64, I, J, T)
@@ -326,13 +328,17 @@ end
 
 
 
-@time res_quality_uncertainty, res_quality_expectation, res_unit_bought, res_received_ad, res_neighbours_bought, res_stock = simulate(num_customers, num_firms, max_iter, prices, advertising, A, σ_v0, σ_ϵ, σ_α, wealth, max_stock_period, risk, network_type, num_links, pref_attachment_links, accessibility_step, λ_ind, λ_wom, λ_ad, buyer_memory)
+
+
+@time res_quality_uncertainty, res_quality_expectation, res_unit_bought, res_received_ad, res_neighbours_bought, res_stock = simulate(num_customers, num_firms, max_iter, prices_trans, advertising, A, σ_v0, σ_ϵ, σ_α, wealth, max_stock_period, risk, network_type, num_links, pref_attachment_links, accessibility_step, λ_ind, λ_wom, λ_ad, buyer_memory)
 
 buying = sum(res_unit_bought, dims=1)
 buying = dropdims(buying, dims=1)
-buying = buying[:,2:end]
+buying = buying[:,3:end]
 
 groupedbar(transpose(buying), bar_position = :stack, lw=false, xlabel = "Time", ylabel = "Sales")
+
+sortperm(buying[1,:])
 
 sum(mean(buying, dims=2)) * 10
 
@@ -340,6 +346,8 @@ plot(buying[1,:])
 plot!(buying[2,:])
 plot!(buying[3,:])
 plot!(buying[4,:])
+
+scatter(vec(mean(res_stock, dims=1)), vec(sum(buying, dims=1)))
 
 plot(buying[1,:])
 plot!(prices[1], lw=2, color=:black)
@@ -354,6 +362,10 @@ plot!(expectation[3,:])
 plot!(expectation[4,:])
 plot!(expectation[5,:])
 plot!(expectation[6,:])
+
+A
+
+σ_v0
 
 uncertainty = mean(res_quality_uncertainty, dims=1)
 uncertainty = dropdims(uncertainty, dims=1)
@@ -378,12 +390,39 @@ res_quality_uncertainty[:,:,1]
 
 # SANDBOX
 
+#### firm 1 preparing its strategy ####
+
+prices = [[50 for i in 1:max_iter] for j in 1:num_firms]
+cog = [[35 for i in 1:max_iter] for j in 1:num_firms]
+margin = prices .- cog
+
+discount = [[0. for i in 1:max_iter] for j in 1:num_firms]
+discount[1][50:80] .= 10
+discount[1][160:180] .= 10
+discount[1] .= 500 / max_iter
+prices_trans = prices .- discount
+margin_real = prices .- discount .- cog
+
+sum(margin[1][3:end] .* buying[1,:])
+sum(margin_real[1][3:end] .* buying[1,:])
+
+investment = 50 * max_iter
+advertising = ADVERTISING = [[0.05 for i in 1:max_iter] for x in 1:num_firms]
+additional_investment = 20 * max_iter
+advertising[1] = [0.07 for i in 1:max_iter]
+
+cost = sum(discount[1][3:end] .* buying[1,:]) + investment + additional_investment
+margin = sum(margin[1][3:end] .* buying[1,:])
+
+roi = margin / cost - 1
+
+
 num_firms = NUM_FIRMS = 4
 num_customers = NUM_CUSTOMERS = 1000
 network_type = NETWORK_TYPE = "preferential_attachment" # type of network between agents
-num_links = NUM_LINKS = 200 # number of links, for random graphs only
+num_links = NUM_LINKS = 200 # number of links,                                                                    for random graphs only
 pref_attachment_links = PREF_ATTACHMENT_LINKS = 2 # number of neighbours per agent, for barabasi-albert only
-accessibility_step = ACCESSIBILITY_STEP = 2 # distance from agent to agent, defining neighbourhood
+accessibility_step = ACCESSIBILITY_STEP = 1 # distance from agent to agent, defining neighbourhood
 
 λ_ind = Λ_IND = 0.5 # individual learning
 λ_wom = Λ_WOM = 0.5 # social learning
@@ -396,9 +435,9 @@ a = A = fill(1., NUM_FIRMS)
 
 max_iter = MAX_ITER = 365
 
-prices = PRICES = [rand(Normal(50, 1), MAX_ITER) for x in 1:NUM_FIRMS]
-PRICES[1][150:175] .= 46
-advertising = ADVERTISING = [rand(Uniform(0,0.01), MAX_ITER) for x in 1:NUM_FIRMS]
+#prices = PRICES = [rand(Normal(50, 1), MAX_ITER) for x in 1:NUM_FIRMS]
+#PRICES[1][150:175] .= 46
+
 ADVERTISING[1][10:35] .= 0.20
 
 
