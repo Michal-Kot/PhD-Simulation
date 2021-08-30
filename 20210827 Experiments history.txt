@@ -1,6 +1,5 @@
 # Experiment 1
 
-
 r_num_firms = [2,4]
 r_num_customers = [200]
 r_network_type = ["random"]
@@ -35,7 +34,6 @@ reps = 1
 
 # Price elasticity experiment
 
-
 r_num_firms = [4]
 r_num_customers = [200]
 r_network_type = ["random"]
@@ -67,3 +65,35 @@ r_ai = [-0.025,0.,0.025,0.05,0.075]
 r_max_iter = [365]
 
 reps = 10
+
+# No signals experiment
+
+r_num_firms = [4]
+r_num_customers = [200]
+r_network_type = ["random"]
+r_num_links = [0,40,80,120,160,200]
+r_pref_attachment_links = [1]
+r_accessibility_step = [1]
+r_λ_ind = [0.,1.]
+r_λ_wom = [0.,1.] # social learning
+r_λ_ad = [0.,1.]
+
+r_a = [1.]
+r_σ2_v0 = [0.5]
+r_σ2_α = [0.5]
+r_σ2_ϵ = [0.5]
+
+r_max_stock_period = [20]
+r_wealth = [50.]
+r_risk = [50.]
+r_buyer_memory = [15000]
+
+r_p = [60]
+r_c = [30]
+r_d = [0.,2.5,5.,7.5,10.,12.5,15.,17.5,20.,22.5,25.,27.5,30.]
+
+r_cpp = [1.]
+r_i = [0.,0.025,0.050,0.075,0.10]
+r_ai = [0.]
+
+r_max_iter = [365]
