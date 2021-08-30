@@ -106,3 +106,15 @@ function update_quality_expectation(method::String, customers::Vector{customer},
         return 0
     end
 end
+
+
+
+rename!(FINAL_DF, [:num_firms, :num_customers, :network_type, :pref_att_links, :acc_step, :lam_ind, :lam_wom, :lam_ad, :a, :sig_v0, :sig_alp, :sig_eps, :max_stock, :wealth, :risk, :buyer_memory, :p, :c, :d, :cpp, :i, :ai, :max_iter,:roi, :mgn, :cost])
+
+@chain FINAL_DF begin
+    @by([:cpp, :d, :ai], mean_mgn = mean(:mgn), mean_cst = mean(:cost), mean_roi = mean(:mgn) / mean(:cost))
+    unstack([:cpp, :d], :ai, :mean_roi)
+end
+
+unstack(df1, :d, :ai, :mean_mgn)
+
