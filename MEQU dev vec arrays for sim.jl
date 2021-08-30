@@ -494,34 +494,34 @@ end
 r_num_firms = [4]
 r_num_customers = [200]
 r_network_type = ["random"]
-r_num_links = [0]
+r_num_links = [0,40,80,120,160,200]
 r_pref_attachment_links = [1]
 r_accessibility_step = [1]
-r_λ_ind = [1.]
-r_λ_wom = [1.] # social learning
-r_λ_ad = [1.]
+r_λ_ind = [0.,1.]
+r_λ_wom = [0.,1.] # social learning
+r_λ_ad = [0.,1.]
 
 r_a = [1.]
 r_σ2_v0 = [0.5]
 r_σ2_α = [0.5]
 r_σ2_ϵ = [0.5]
 
-r_max_stock_period = [10,20,30]
-r_wealth = [25., 50., 75.]
-r_risk = [25., 50., 75.]
+r_max_stock_period = [20]
+r_wealth = [50.]
+r_risk = [50.]
 r_buyer_memory = [15000]
 
 r_p = [60]
 r_c = [30]
-r_d = [0.]
+r_d = [0.,2.5,5.,7.5,10.,12.5,15.,17.5,20.,22.5,25.,27.5,30.]
 
 r_cpp = [1.]
-r_i = [0.]
+r_i = [0.,0.025,0.050,0.075,0.10]
 r_ai = [0.]
 
 r_max_iter = [365]
 
-reps = 100
+reps = 10
 
 params = vec(collect(Base.Iterators.product(r_num_firms, r_num_customers, r_network_type, r_pref_attachment_links, r_accessibility_step, r_λ_ind, r_λ_wom, r_λ_ad, r_a, r_σ2_v0, r_σ2_α, r_σ2_ϵ, r_max_stock_period, r_wealth, r_risk, r_buyer_memory, r_p, r_c, r_d, r_cpp, r_i, r_ai, r_num_links, r_max_iter)))
 
@@ -556,7 +556,7 @@ num_firms = NUM_FIRMS = 4
 num_customers = NUM_CUSTOMERS = 1000
 network_type = NETWORK_TYPE = "random" # type of network between agents      
 pref_attachment_links = PREF_ATTACHMENT_LINKS = 2 # number of neighbours per agent, for barabasi-albert only
-num_links = 200
+num_links = 0
 accessibility_step = ACCESSIBILITY_STEP = 1 # distance from agent to agent, defining neighbourhood
 
 λ_ind = Λ_IND = 0.5 # individual learning
@@ -573,7 +573,7 @@ a = 1.
 σ2_ϵ = 0.5
 σ2_α = 0.5
 
-max_iter = MAX_ITER = 365
+max_iter = MAX_ITER = 365*6
 
 #ADVERTISING = fill(fill(0.0, MAX_ITER), NUM_FIRMS)
 
@@ -589,7 +589,7 @@ d = 0
 discount, prices, margin = create_price(p,c,d,max_iter, num_firms)
 
 cpp = 1.
-its = 0.03
+its = 0.
 aits = 0.
 
 investment, advertising = create_advertising(cpp, its, aits, max_iter, num_firms, num_customers)
