@@ -556,12 +556,12 @@ num_firms = NUM_FIRMS = 4
 num_customers = NUM_CUSTOMERS = 1000
 network_type = NETWORK_TYPE = "random" # type of network between agents      
 pref_attachment_links = PREF_ATTACHMENT_LINKS = 2 # number of neighbours per agent, for barabasi-albert only
-num_links = 0
+num_links = 1000
 accessibility_step = ACCESSIBILITY_STEP = 1 # distance from agent to agent, defining neighbourhood
 
-λ_ind = Λ_IND = 0.5 # individual learning
-λ_wom = Λ_WOM = 0.5 # social learning
-λ_ad = Λ_AD = 0.1
+λ_ind = Λ_IND = 1. # individual learning
+λ_wom = Λ_WOM = 1. # social learning
+λ_ad = Λ_AD = 1.
 
 #a = A = fill(1., NUM_FIRMS)
 #σ_v0 = Σ_V0 = fill(0.5, 10)[1:NUM_FIRMS]
@@ -573,24 +573,24 @@ a = 1.
 σ2_ϵ = 0.5
 σ2_α = 0.5
 
-max_iter = MAX_ITER = 365*6
+max_iter = MAX_ITER = 365
 
 #ADVERTISING = fill(fill(0.0, MAX_ITER), NUM_FIRMS)
 
 max_stock_period = MAX_STOCK_PERIOD = 10
-wealth = WEALTH = 10.0
-risk = RISK = 8.0
+wealth = WEALTH = 50.0
+risk = RISK = 50.0
 buyer_memory = BUYER_MEMORY = 15000
 
 p = 60
 c = 30
-d = 0
+d = 10
 
 discount, prices, margin = create_price(p,c,d,max_iter, num_firms)
 
 cpp = 1.
-its = 0.
-aits = 0.
+its = 0.05
+aits = 0.025
 
 investment, advertising = create_advertising(cpp, its, aits, max_iter, num_firms, num_customers)
 
@@ -611,7 +611,7 @@ p=plot!(uncertainty[2,:], expectations[2,:], color = colors_gre, xflip=true, lab
 p=plot!(uncertainty[3,:], expectations[3,:], color = colors_blu, xflip=true, label = "Firm #3")
 p=plot!(uncertainty[4,:], expectations[4,:], color = colors_gb, xflip=true, label = "Firm #4")
 
-savefig(p, "C:/Users/mihau/Documents/system_dynamics_ad_discount.png")
+savefig(p, "C:/Users/mihau/Documents/system_dynamics_ad_discount.pdf")
 
 std_uncertainty = dropdims(std(res_quality_uncertainty, dims=1), dims=1)
 
@@ -620,7 +620,7 @@ p9=plot!(std_uncertainty[2,:], label = "Firm #2")
 p9=plot!(std_uncertainty[3,:], label = "Firm #3")
 p9=plot!(std_uncertainty[4,:], label = "Firm #4")
 
-savefig(p9, "C:/Users/mihau/Documents/system_dynamics_std_uncertainty.png")
+savefig(p9, "C:/Users/mihau/Documents/system_dynamics_std_uncertainty.pdf")
 
 
 Plots.plot(uncertainty[1,:])
@@ -636,34 +636,36 @@ function circle_shape(h,k,r)
 end
 
 p2=scatter(uncertainty[:,10], expectations[:,10],color = ["red","green","blue","cyan"], label=nothing, xflip=true, legend=:bottomleft,xlabel = "Uncertainty", ylabel = "Expected quality")
-p2=plot!(circle_shape(0.46,0.995,0.03), linecolor="black",linestyle=:dot, label = "Iteration: 10")
+p2=plot!(circle_shape(0.35,0.995,0.06), linecolor="black",linestyle=:dot, label = "Iteration: 10")
 
 p2=scatter!(uncertainty[:,100], expectations[:,100],color = ["red","green","blue","cyan"], xflip=true, label=nothing)
-p2=plot!(circle_shape(0.32,0.96,0.05), linecolor="black", linestyle=:dash, label = "Iteration: 100")
+p2=plot!(circle_shape(0.075,0.975,0.03), linecolor="black", linestyle=:dash, label = "Iteration: 100")
+
 
 p2=scatter!(uncertainty[:,end], expectations[:,end],color = ["red","green","blue","cyan"], xflip=true, label=nothing)
-p2=plot!(circle_shape(0.17,0.97,0.04), linecolor="black", label = "Iteration: 1000")
+p2=plot!(circle_shape(0.025,0.985,0.02), linecolor="black", label = "Iteration: 365")
 
-savefig(p2, "C:/Users/mihau/Documents/system_dynamics_markovitz_dynamic.png")
+savefig(p2, "C:/Users/mihau/Documents/system_dynamics_markovitz_dynamic.pdf")
 
 
 buying = sum(res_unit_bought, dims=1)
 buying = dropdims(buying, dims=1)
 buying = buying[:,3:end]
 
-p3 = groupedbar(transpose(buying), bar_position = :stack, lw=false, xlabel = "Time", ylabel = "Sales")
+sum(buying, dims=2)
 
-savefig(p3, "C:/Users/mihau/Documents/system_dynamics_sales.png")
+p3 = groupedbar(transpose(buying), bar_position = :stack, lw=0, xlabel = "Time", ylabel = "Sales", color = ["red" "green" "blue" "cyan"], legend = nothing)
 
-plot(res_quality_uncertainty[1,1,2:end], color=:lightgrey,legend=false)
-[Plots.display(plot!(res_quality_uncertainty[i,1,2:end], color=:lightgrey,legend=false)) for i in 2:num_customers]
+savefig(p3, "C:/Users/mihau/Documents/system_dynamics_sales.pdf")
+
+p7=plot(res_quality_uncertainty[1,1,2:end], color=:lightgrey,legend=false)
+[Plots.display(plot!(res_quality_uncertainty[i,1,2:end], color=:lightgrey,legend=false)) for i in 2:200]
 
 
 plot!(uncertainty[1,:], color="red", lw=2)
 xlabel!("Iteration")
 ylabel!("Uncertainty of brand 1")
 
-res_quality_uncertainty[1,1,2:end]
-res_quality_uncertainty[1,1,2:end]
+savefig(p7, "C:/Users/mihau/Documents/system_single_uncertainty.pdf")
 
 """
